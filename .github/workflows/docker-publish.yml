@@ -16,6 +16,7 @@ jobs:
       - name: Install dep
         run: sudo apt install -y qemu-user-static binfmt-support
 
+
       - name: Clone Shinobi dev branch
         run: git clone -b dev --single-branch https://gitlab.com/Shinobi-Systems/Shinobi.git
 
@@ -44,4 +45,32 @@ jobs:
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
           docker tag $IMAGE_NAME $IMAGE_ID:latest
           docker tag $IMAGE_NAME $IMAGE_ID:dev
+          docker push $IMAGE_ID --all-tags
+
+
+      - name: Clone Shinobi master branch
+        run: |
+          rm -fr Shinobi
+          git clone -b master --single-branch https://gitlab.com/Shinobi-Systems/Shinobi.git
+      - name: Build image
+        run: |
+          cd Shinobi
+          docker build . --file Dockerfile.arm32v7 --tag $IMAGE_NAME
+      - name: Log into GitHub registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push image to GitHub registry
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository }}/$IMAGE_NAME
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          docker tag $IMAGE_NAME $IMAGE_ID:master
+          docker push $IMAGE_ID --all-tags
+      - name: Log into Docker Hub registry
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Push image to Docker Hub registry
+        run: |
+          IMAGE_ID=giovannimatina/$IMAGE_NAME
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          docker tag $IMAGE_NAME $IMAGE_ID:master
           docker push $IMAGE_ID --all-tags
